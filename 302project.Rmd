@@ -5,9 +5,14 @@ date: "2024-06-07"
 output:
   pdf_document: default
   html_document: default
+  heaer-includes:
+    - \usepackage{booktabs}
 ---
 
 ```{r}
+# Load knitr library
+library(knitr)
+
 # load dataset
 raw_dataset <- read.csv("data/cars.csv")
 print(head(raw_dataset))
@@ -22,19 +27,23 @@ print(head(dataset))
 
 ## Method
 
-We will analyze on the categorical variable Fuel Type, Transmission; and continuous variable Year, Kilometers Driven, Owner Type, Mileage, Engine, Poser, and Seats. We choose to discard Brand and Model because they contain too many categories, and would split the data set into too many categories with small number of observations in each category. For categorical, each column are turned into numeric datatypes. 
+We will analyze on the categorical variable Fuel Type, Transmission; and continuous variable Year, Kilometers Driven, Owner Type, Mileage, Engine, Poser, and Seats. We choose to discard Brand and Model because they contain too many categories, and would split the data set into too many categories with small number of observations in each category. For all categorical columns, we first change the ones with multiple categories into multiple single column columns, then treat the variables as dummy variables.
 
-(make a table here)
-Column         0           1
-Fuel Type      Diesel      Petrol
-Transmission   Mannual     Automatic
-Owner Type     First       Second     Third
+```{r echo=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+df <- data.frame(
+  Columns = c("Fuel Type", "Transmission", "Owner Type Second", "Owner Type Third", "Seat 5", "Seat 7"),
+  Value_1 = c("Petrol", "Automatic", "Second", "Third", "5", "7"),
+  Value_0 = c("Diesel", "Manual", "Otherwise", "Otherwise","Otherwise", "Otherwise")
+)
 
+# Create table
+kable(df, caption = "Treatments of categorical variables")
+```
 
 For seats, we believe that treating it as a categorical is better because the targeting customers of 4-seated, 5-seated, and 7-seated might be different. After experiment with all other factors being identical, we find that using seats as categorical variable increases the $R^2$ score.
 
 For other columns, they are treated as-is.
-
 
 ```{r}
 # drop Brand, Model column as they are not needed
@@ -45,10 +54,10 @@ dataset$Fuel_Type <- factor(dataset$Fuel_Type)
 dataset$Transmission <- factor(dataset$Transmission)
 
 dataset$Owner_Type<- factor(dataset$Owner_Type)
+
+dataset$Seats <- factor(dataset$Seats)
 head(dataset)
 ```
-
-there does not seem to have rows with large correlations
 
 ```{r}
 # split train, test dataset
@@ -66,47 +75,118 @@ head(test_set)
 summary(train_set)
 summary(test_set)
 ```
-
-## Models
-### Just Linear model
+### Remove outliers
 ```{r}
-model <- lm(train_set$Price ~ train_set$Year + train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Engine + train_set$Power + train_set$Seats)
+library(ggplot2)
+library(reshape)
+train_set_plot <- data.frame(train_set$Year,train_set$Kilometers_Driven, train_set$Mileage, train_set$Engine, train_set$Power)
+meltData <- melt(train_set_plot)
+p <- ggplot(meltData, aes(factor(variable), value)) 
+p + geom_boxplot() + facet_wrap(~variable, scale="free")
 ```
+A few outliers appear in Power, Kilometers_driven and Milage, we will eliminate them
+
+
 
 ```{r}
+train_set <- train_set[(train_set$Kilometers_Driven < 50000) & (train_set$Mileage < 25) & (train_set$Power < 300) & train_set$Engine < 4500,]
+```
+## Models
+
+### Just Linear Model
+
+```{r}
+model <- lm(Price ~ Year + Kilometers_Driven + Fuel_Type + Transmission + Owner_Type + Mileage + Engine + Power, data=train_set)
+
 summary(model)
 plot(model)
 ```
 
-The residual vs fitted does not look random, at small values the residuals are much smaller, we try to use a log linear model instead
+We can see that linearity is violated since the fit line (red) is quite far from flat, and constant variance, and uncorrelated error are also violated because at small values the residuals are much smaller. Since this looks like the situation that $Var[y] \propto E[y]^2$ we try to use a log linear model according to the **delta method**
 
-## Log Linear model
+### Log Linear model
+
 ```{r}
-log_model <- lm(log(train_set$Price) ~ train_set$Year + train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Engine + train_set$Power + train_set$Seats)
+# calculate log datasets
+train_set$Price_log <- log(train_set$Price)
+test_set$Price_log <- log(test_set$Price)
+```
+
+```{r}
+log_model <- lm(Price_log ~ Year + Kilometers_Driven + Fuel_Type + Transmission + Owner_Type + Mileage + Engine + Power, data=train_set)
 ```
 
 ```{r}
 summary(log_model)
 plot(log_model)
 ```
-
 ```{r}
-seats <- factor(train_set$Seats)
-log_model_seat3 <- lm(log(train_set$Price) ~ train_set$Year + train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Power+ seats + train_set$Engine)
+train_set$is_first_handed <- train_set$Owner_Type == 'First'
+test_set$is_first_handed <- test_set$Owner_Type == 'First'
+```
+
+### Model of choice
+```{r}
+better_log_model <- lm(Price_log ~ Fuel_Type + Transmission + is_first_handed + Mileage + Power, data = train_set)
+plot(better_log_model)
+summary(better_log_model)
 ```
 
 ```{r}
-summary(log_model_seat3)
-plot(log_model_seat3)
+predictions <- predict(better_log_model, newdata = test_set)
 ```
-Then we focus on the engine and year column with largest $Pr(>|t|)$
+Then we try to use transformations on the variables with largest $P$ value, $Year$, $Engine$, and $Kilometer$
+
+```{r}
+plot(train_set$Engine, train_set$Price_log)
+plot(train_set$Engine, train_set$Price)
+```
+
 
 
 ```{r}
-model <- lm(log(train_set$Price) ~  train_set$Year+train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Power+ seats + 1/train_set$Engine)
-```
 
-```{r}
-summary(model)
+train_set$is_first_handed <- train_set$Owner_Type == 'First'
+model <- lm(Price ~ Year + Kilometers_Driven + Transmission + is_first_handed + Power, data=train_set)
 plot(model)
+summary(model)
+```
+
+```{r}
+test_model = function(model, column) {
+  predictions = predict(model, newdata = test_set)
+
+  # Calculate residuals
+  residuals = column - predictions
+  
+  # Calculate Mean Absolute Error
+  mae_value = mae(column, predictions)
+  
+  # Calculate Mean Squared Error
+  mse_value = mse(column, predictions)
+  
+  # Calculate R-squared
+  rsq_value = cor(column, predictions)^2
+  
+  # Calculate standard error of residuals
+  std_error_residuals = sqrt(sum(residuals^2) / (length(residuals) - 2))
+  
+  # Print the evaluation metrics
+  cat("Summary of Model Performance on Test Data\n")
+  cat("========================================\n")
+  cat("Residuals:\n")
+  cat("    Min      1Q  Median      3Q     Max \n")
+  cat(sprintf("%8.4f %8.4f %8.4f %8.4f %8.4f \n", min(residuals), quantile(residuals, 0.25), 
+              median(residuals), quantile(residuals, 0.75), max(residuals)))
+  
+  cat("\nCoefficients:\n")
+  test_coefficients <- coef(summary(model))
+  print(test_coefficients)
+  
+  cat("\nResidual standard error:", std_error_residuals, "\n")
+  cat("Multiple R-squared:", rsq_value, "\n")
+  cat("Mean Absolute Error (MAE):", mae_value, "\n")
+  cat("Mean Squared Error (MSE):", mse_value, "\n")
+    
+}
 ```
