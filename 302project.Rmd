@@ -1,0 +1,112 @@
+---
+title: "Linear Regression Analysis on Second-Handed Car Price"
+author: "Aiwei Yin, Kaiyao Duan, Zhanyan Guo, Alexander Lee"
+date: "2024-06-07"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+# load dataset
+raw_dataset <- read.csv("data/cars.csv")
+print(head(raw_dataset))
+```
+
+```{r}
+# shuffle the dataset
+set.seed(1145)
+dataset <- raw_dataset[sample(1:nrow(raw_dataset)),]
+print(head(dataset))
+```
+
+## Method
+
+We will analyze on the categorical variable Fuel Type, Transmission; and continuous variable Year, Kilometers Driven, Owner Type, Mileage, Engine, Poser, and Seats. We choose to discard Brand and Model because they contain too many categories, and would split the data set into too many categories with small number of observations in each category. For categorical, each column are turned into numeric datatypes. 
+
+(make a table here)
+Column         0           1
+Fuel Type      Diesel      Petrol
+Transmission   Mannual     Automatic
+Owner Type     First       Second     Third
+
+
+For seats, we believe that treating it as a categorical is better because the targeting customers of 4-seated, 5-seated, and 7-seated might be different. After experiment with all other factors being identical, we find that using seats as categorical variable increases the $R^2$ score.
+
+For other columns, they are treated as-is.
+
+
+```{r}
+# drop Brand, Model column as they are not needed
+dataset <- dataset[!names(dataset) %in% c("Brand", "Model")]
+
+# convert Fuel_Type, Transmission, Owner_Type into categorical features
+dataset$Fuel_Type <- factor(dataset$Fuel_Type)
+dataset$Transmission <- factor(dataset$Transmission)
+
+dataset$Owner_Type<- factor(dataset$Owner_Type)
+head(dataset)
+```
+
+there does not seem to have rows with large correlations
+
+```{r}
+# split train, test dataset
+set.seed(1147)
+sample<-sample(c(rep(0, 0.7 * nrow(dataset)), rep(1, 0.3 * nrow(dataset))))
+train_set <- dataset[sample == 0, ]
+test_set <- dataset[sample == 1, ]
+print(nrow(train_set))
+print(nrow(test_set))
+head(train_set)
+head(test_set)
+```
+
+```{r}
+summary(train_set)
+summary(test_set)
+```
+
+## Models
+### Just Linear model
+```{r}
+model <- lm(train_set$Price ~ train_set$Year + train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Engine + train_set$Power + train_set$Seats)
+```
+
+```{r}
+summary(model)
+plot(model)
+```
+
+The residual vs fitted does not look random, at small values the residuals are much smaller, we try to use a log linear model instead
+
+## Log Linear model
+```{r}
+log_model <- lm(log(train_set$Price) ~ train_set$Year + train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Engine + train_set$Power + train_set$Seats)
+```
+
+```{r}
+summary(log_model)
+plot(log_model)
+```
+
+```{r}
+seats <- factor(train_set$Seats)
+log_model_seat3 <- lm(log(train_set$Price) ~ train_set$Year + train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Power+ seats + train_set$Engine)
+```
+
+```{r}
+summary(log_model_seat3)
+plot(log_model_seat3)
+```
+Then we focus on the engine and year column with largest $Pr(>|t|)$
+
+
+```{r}
+model <- lm(log(train_set$Price) ~  train_set$Year+train_set$Kilometers_Driven + train_set$Fuel_Type + train_set$Transmission + train_set$Owner_Type + train_set$Mileage + train_set$Power+ seats + 1/train_set$Engine)
+```
+
+```{r}
+summary(model)
+plot(model)
+```
