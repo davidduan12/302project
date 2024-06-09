@@ -1,2 +1,4 @@
 .Rproj.user/
 302project.Rproj
+*.html
+*.pdf
