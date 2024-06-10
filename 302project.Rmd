@@ -10,6 +10,22 @@ output:
 ---
 
 # Introduction
+The used car market is an ever-expanding market as the number of individuals who are interested in these vehicles has increased. Several factors have influenced the prices of used cars, and understanding these factors is essential for anyone interested in this market. Whether you are a buyer or a seller, proper analysis is required to make informed decisions in this growing market. 
+“CITE literature” 
+In this report, we use a linear regression model to analyze collected data and provide stakeholders with a reliable measure for predicting the expected price of used cars. By going in-depth with the intricacies of the model and its findings, buyers, and sellers will gain a better understanding of the factors driving price variations, allowing them to make educated decisions.
+The response variable $(y_i)$ is the Price of Used Cars, which is a continuous random variable that follows an approximately normal distribution. The predictor variables $(x_i)$ include a combination of the following numerical variables:
+Year
+Kilometers Driven
+Owner Type
+Mileage
+Engine
+Power
+Seats
+And two categorical variables:
+Fuel Type
+Transmission
+A linear regression model can accommodate both types of variables. We performed an analysis on the data and discovered that there isn’t much skewness in either the response or predictor variables. Furthermore, the normality and linearity assumptions required for a linear regression model are met. Based on the fitted model, the corresponding coefficient shows how changes in a single predictor, while keeping all others constant, affect the price of used cars. Thus, using a linear regression model to forecast the expected price of a used car is a good measure for predicting prices. “CITE LITERATURE”
+ 
 
 
 ```{r echo=FALSE, eval=TRUE,results='hide',fig.keep='none', message=FALSE, warning=FALSE}
