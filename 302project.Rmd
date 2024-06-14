@@ -16,17 +16,18 @@ In this report, we employ a linear regression model to analyze collected data, p
 
 The response variable $(y_i)$ is the Price of Used Cars, a continuous random variable that follows an approximately normal distribution. The predictor variables $(x_i)$ include the following numerical variables:
 
-Year
-Kilometers Driven
-Owner Type
-Mileage
-Engine
-Power
-Seats
-Additionally, there are two categorical variables:
+- Year
+- Kilometers Driven
+- Owner Type
+- Mileage
+- Engine
+- Power
+- Seats
+- Additionally, there are two categorical variables:
 
-Fuel Type
-Transmission
+- Fuel Type
+- Transmission
+
 A linear regression model can accommodate both numerical and categorical variables. Our analysis revealed that there is minimal skewness in both the response and predictor variables. Moreover, the normality and linearity assumptions required for a linear regression model are met. Based on the fitted model, the coefficients show how changes in a single predictor, while keeping all others constant, affect the price of used cars. Therefore, using a linear regression model to forecast the expected price of a used car is an effective method for predicting prices. “CITE LITERATURE”
 
 
@@ -52,6 +53,8 @@ print(head(dataset))
 ```
 
 # Method
+
+# Results
 
 We will analyze on the categorical variable Fuel Type, Transmission; and continuous variable Year, Kilometers Driven, Owner Type, Mileage, Engine, Poser, and Seats. We choose to discard Brand and Model because they contain too many categories, and would split the data set into too many categories with small number of observations in each category. For all categorical columns, we first change the ones with multiple categories into multiple single column columns, then treat the variables as dummy variables.
 
@@ -111,7 +114,6 @@ summary(train_set)
 summary(test_set)
 ```
 
-## Data inspection
 
 ### Continuous Variables
 ```{r echo=FALSE, eval=TRUE, results=FALSE, message=FALSE, warning=FALSE}
@@ -123,7 +125,7 @@ p <- ggplot(meltData, aes(factor(variable), value))
 p + geom_boxplot() + facet_wrap(~variable, scale="free")
 ```
 
-A few outliers appear in Power, Kilometers_driven and Milage, we will eliminate them using Cook's distance
+From the box plots, we find there there are a few outliers that could potentially be leveraging points. We will use Cook's distance to eliminate bad leveraging points below.
 
 ### Categorical Variables
 
@@ -161,12 +163,12 @@ plot(train_set$Seats7, train_set$Price,
 par(mfrow = c(1, 1))
 ```
 
-We find that ownly Transmission and First handed have a significant difference in data, while Seats do not have enough observations, and Fuel type 
+We find that ownly Transmission and First handed have a significant difference in data, while Seats do not have enough observations, and Fuel type have very similar distributions.
 
-
-## Models
 
 ### Simple Linear Model
+
+Prior to cleaning data, we will first make a linear model to provide a baseline to compare the effectiveness of our methods, and also to provide a model to perform box-cox transformation, cook's score
 
 ```{r echo = FALSE, eval = TRUE, results="hide", fig.keep = "none", message=FALSE, warning=FALSE}
 simple_model <- lm(Price ~ Year + Kilometers_Driven + Fuel_Type + Transmission + Owner_TypeFirst + Mileage + Engine + Power, data=train_set)
@@ -175,12 +177,15 @@ summary(simple_model)
 plot(simple_model)
 ```
 
-graph to include in report
 
 ```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE}
+par(mfrow=c(1,2))
 plot(simple_model, which=1, main="Residual vs Fitted")
 plot(simple_model, which=2, main="Normal QQ plot")
+par(mfrow=c(1,1))
 ```
+
+From the Residual vs Fitted graph, we find that both linearity and
 
 ### Outliers
 
@@ -191,13 +196,20 @@ cook <- cooks.distance(simple_model)
 reduced_train_set <- train_set[cook < 3/nrow(train_set),]
 ```
 
+```{r echo=FALSE, eval=TRUE, results="hide", message=FALSE, warning=FALSE}
+train_set_plot <- data.frame(reduced_train_set$Year, reduced_train_set$Kilometers_Driven, reduced_train_set$Mileage, reduced_train_set$Engine, reduced_train_set$Power)
+meltData <- melt(train_set_plot)
+p <- ggplot(meltData, aes(factor(variable), value)) 
+p + geom_boxplot() + facet_wrap(~variable, scale="free")
+```
+We can see that some outliers gets effectively removed.
+
 ### box-cox
 We can see that linearity is violated since the fit line (red) is quite far from flat, and constant variance, and uncorrelated error are also violated because at small values the residuals are much smaller. We will use **box cox tranformation method**
 
 ```{r echo=FALSE, eval=TRUE, results='hide', fig.keep='none', message=FALSE, warning=FALSE}
 b <- boxcox(simple_model)
 lambda <- b$x[which.max(b$y)]
-
 ```
 
 we find that the optimal lambda is $\lambda = `r lambda`$
@@ -222,8 +234,14 @@ vif_df <- data.frame(vif_scores)
 kable(vif_df, caption = "Variance Inflation Factors")
 ```
 
-Year and Kilometer have a very high VIF, we choose to discard them as their. However for Power and Engine, we suspect the high VIF come from the fact that these two variables are highly correlated.
+Year and Kilometer have a very high VIF, similar results could be shown by inspecting the plot of these two variables, we choose to discard them. However for Power and Engine, we suspect the high VIF come from the fact that these two variables are highly correlated.
 
+```{r echo=FALSE, results='hide'}
+par(mfrow = c(1,2))
+plot(train_set$Kilometers_Driven, train_set$Price, main="Kilometers vs Price", xlab = "Kilometers", ylab = "Price")
+plot(train_set$Year, train_set$Price, main="Year vs Price", xlab = "Year", ylab = "Price")
+par(mfrow=c(1,1))
+```
 
 ```{r echo=FALSE, eval=TRUE, results='hide', message=FALSE, warning=FALSE}
 corrplot(correlations, method="circle", type="upper")
@@ -231,7 +249,7 @@ engine_power_cov <- data.frame(correlations)$Power[5]
 engine_price_cov <- data.frame(correlations)$Price_transformed[5]
 price_power_cov <- data.frame(correlations)$Price_transformed[6]
 ```
-The covariance $Cov(Power, Engine) = `r engine_power_cov`$ shows a high colinearity, we choose to discard Engine, which has lower covariance with Price ($Cov(Engine, Price\_transformed) = `r engine_price_cov`$, whereas $Cov(Power, Price_transformed) = `r price_power_cov`$ )
+The covariance $Cov(Power, Engine) = `r engine_power_cov`$ shows a high colinearity, we choose to discard Engine, which has lower covariance with Price ($Cov(Engine, Price) = `r engine_price_cov`$, whereas $Cov(Power, Price) = `r price_power_cov`$ )
 
 
 ### Model of choice
@@ -241,11 +259,20 @@ better_transformed_model <- lm(Price_transformed ~ Fuel_Type + Transmission + Ow
 plot(better_transformed_model)
 summary(better_transformed_model)
 ```
+```{r echo=FALSE, warning=FALSE, error=FALSE,}
+rsq_good <- summary(better_transformed_model)$r.squared
+rsq_bad <- summary(simple_model)$r.squared
+```
+
+In the transformed model, we achieved a R-squared of $`r rsq_good`$, an increase of $`r rsq_good - rsq_bad`$ compared to the baseline model ($`r rsq_bad`$). We have also 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
+par(mfrow=c(1,2))
 plot(better_transformed_model, which=1, main="Residual vs Fitted")
 plot(better_transformed_model, which=2, main="Normal QQ plot")
+par(mfrow=c(1,1))
 ```
+Rresults show that our treatment of  removing outliers with cook's distance, using box-cox transformation, and utilizing VIF to remove useless variables improves our model effectively.
 
 ```{r echo=FALSE, eval=TRUE, results='hide', fig.keep='none', message=FALSE, warning=FALSE}
 predictions <- predict(better_transformed_model, newdata = test_set)
