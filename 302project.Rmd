@@ -10,25 +10,11 @@ output:
 ---
 
 # Introduction
-The used car market is expanding rapidly, driven by an increasing number of individuals showing interest in these vehicles. Several factors influence the prices of used cars, and understanding these factors is essential for anyone involved in this market. Whether you are a buyer or a seller, proper analysis is required to make informed decisions in this growing market. “CITE literature”
+The demand for cars in modern society has grown significantly, leading to a robust market for second-hand vehicles. Unlike the straightforward process of purchasing a new car from a dealership with fixed prices, buying a used car involves numerous factors that can complicate the decision-making process. Understanding these factors is crucial for consumers to make informed choices in the second-hand car market.
 
-In this report, we employ a linear regression model to analyze collected data, providing stakeholders with a reliable measure for predicting the expected price of used cars. By delving into the intricacies of the model and its findings, buyers and sellers will gain a deeper understanding of the factors driving price variations, enabling them to make educated decisions.
+Previous research has extensively explored the determinants of second-hand car prices using various methods. (Pudaruth 2014) conducted a comparative study on multiple linear regression, k-nearest-neighbors (kNN), decision trees, and Naive Bayes to predict used car prices. The study found that while linear regression did not perform as well as kNN, the year of manufacture was a more significant predictor of car prices than mileage. Additionally, it was noted that logarithmic regression slightly outperformed linear regression in predictive accuracy. However, due to missing data, the application of linear regression was limited to using only the year and mileage as predictor variables.
 
-The response variable $(y_i)$ is the Price of Used Cars, a continuous random variable that follows an approximately normal distribution. The predictor variables $(x_i)$ include the following numerical variables:
-
-- Year
-- Kilometers Driven
-- Owner Type
-- Mileage
-- Engine
-- Power
-- Seats
-- Additionally, there are two categorical variables:
-
-- Fuel Type
-- Transmission
-
-A linear regression model can accommodate both numerical and categorical variables. Our analysis revealed that there is minimal skewness in both the response and predictor variables. Moreover, the normality and linearity assumptions required for a linear regression model are met. Based on the fitted model, the coefficients show how changes in a single predictor, while keeping all others constant, affect the price of used cars. Therefore, using a linear regression model to forecast the expected price of a used car is an effective method for predicting prices. “CITE LITERATURE”
+Another study highlighted the critical role of data pre-processing in improving predictive models. By removing outliers, noisy values, and irrelevant columns, the coefficient of determination (R²) improved from 0.62 to 0.73. This improvement underscores the importance of data quality and pre-processing techniques in enhancing the accuracy of predictive models for used car prices.(Muti & Yildiz 2023)
 
 
 ```{r echo=FALSE, eval=TRUE,results='hide',fig.keep='none', message=FALSE, warning=FALSE}
@@ -53,10 +39,23 @@ print(head(dataset))
 ```
 
 # Method
+This study finds the optimal linear regression model to predict the Price of second handed cars given the multiple predictor variables: Brand, Model, Year, Kilometers Driven, Fuel Type, Transmission Type, Owner Type, Mileage, Engine, Power, and Number of Seats.
+
+We begin with preprocessing the data set, turning all the columns with text values that represent categorical variables into dummy variables. Then we will randomly shuffle the data, and partition it into 70% of training set and 30% testing set.
+
+For all categorical columns, we first change the ones with multiple categories into multiple single column columns, then treat the variables as dummy variables. For categorical variables that have multiple categories, we create a dummy variable for each of the categories.
+
+To find out the relation between each of the variables and the our response variable, we first analyze the scatter plot between each of the predictor variables and Price, and discard both the continuous variables that appears completely random and categorical variables that partition the data set into too many small chunks. Then we create a simple multilinear model without any modifications, to provide a baseline model for us to asses the outcomes of our methods. We first check violations of assumptions (linearity, uncorrelated errors, constant variance) with Normal Quantile-Quantile (Q-Q) plots and Residual vs Fitted Values plot. Ideally, the normal Q-Q plot should appear to be a straight diagonal line, and the Residual vs Predict value plot should look completely randomly distributed.
+
+Based on the simple multilinear model, we calculate the Cook's Distance of all the observations in order to find the outliers. We choose to remove all the observations with Cook's distant $\geq 3/n$.
+
+To resolve the violation of the above assumptions, we will use three methods. We will first use transformation on the response variable, choosing the optimal between box-cox transformation, log transformation and power transformation based on the normal QQ plot and residual plots.
+
+After the transformations we will select the predictor variables based on the multi-colinearity with the VIF scores based on the privious simple multilinear model. We choose to analyze the variables with VIF $>0.3$. There are two possible situations, one is that there is no significant linear relationship with price, and one is that there is a high correlation between two of the predictor variables. For the first situation, we choose to directly discard the predictor variable. For the second situation, we choose to discard the predictor variable with lower correlation with Price, and keep the predictor variable with higher covariance.
+
+When we select the preferred model, we will again assess the assumptions above, and validate our model by examining the models with Analysis of Variance (ANOVA) tests, if the P-tests for all the predictor variable show a P-value of less than 0.05, we consider the model as significant. Furthermore we will compare the $R^2$ value of both models, if the $R^2$ value is indeed higher we choose to use the model we selected.
 
 # Results
-
-We will analyze on the categorical variable Fuel Type, Transmission; and continuous variable Year, Kilometers Driven, Owner Type, Mileage, Engine, Poser, and Seats. We choose to discard Brand and Model because they contain too many categories, and would split the data set into too many categories with small number of observations in each category. For all categorical columns, we first change the ones with multiple categories into multiple single column columns, then treat the variables as dummy variables.
 
 ```{r echo=FALSE, eval=TRUE, fig.keep='none', results='hide', message=FALSE, warning=FALSE}
 #knitr::opts_chunk$set(echo = TRUE)
