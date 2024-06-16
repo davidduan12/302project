@@ -1,15 +1,15 @@
 ---
 title: "Linear Regression Analysis on Second-Handed Car Price"
 author: "Aiwei Yin, Kaiyao Duan, Zhanyan Guo, Alexander Lee"
-date: "2024-06-07"
+date: "2024-06-16"
 output:
   pdf_document: default
   html_document: default
   heaer-includes: \usepackage{booktabs}
   word_document: default
 ---
-
-# Introduction
+\newpage
+# 1. Introduction
 The demand for cars in modern society has grown significantly, leading to a robust market for second-hand vehicles. Unlike the straightforward process of purchasing a new car from a dealership with fixed prices, buying a used car involves numerous factors that can complicate the decision-making process. Understanding these factors is crucial for consumers to make informed choices in the second-hand car market.
 
 Previous research has extensively explored the determinants of second-hand car prices using various methods. (Pudaruth 2014) conducted a comparative study on multiple linear regression, k-nearest-neighbors (kNN), decision trees, and Naive Bayes to predict used car prices. The study found that while linear regression did not perform as well as kNN, the year of manufacture was a more significant predictor of car prices than mileage. Additionally, it was noted that logarithmic regression slightly outperformed linear regression in predictive accuracy. However, due to missing data, the application of linear regression was limited to using only the year and mileage as predictor variables.
@@ -38,7 +38,7 @@ dataset <- raw_dataset[sample(1:nrow(raw_dataset)),]
 print(head(dataset))
 ```
 
-# Method
+# 2. Method
 This study finds the optimal linear regression model to predict the Price of second handed cars given the multiple predictor variables: Brand, Model, Year, Kilometers Driven, Fuel Type, Transmission Type, Owner Type, Mileage, Engine, Power, and Number of Seats.
 
 We begin with preprocessing the data set, turning all the columns with text values that represent categorical variables into dummy variables. Then we will randomly shuffle the data, and partition it into 70% of training set and 30% testing set.
@@ -55,7 +55,7 @@ After the transformations we will select the predictor variables based on the mu
 
 When we select the preferred model, we will again assess the assumptions above, and validate our model by examining the models with Analysis of Variance (ANOVA) tests, if the P-tests for all the predictor variable show a P-value of less than 0.05, we consider the model as significant. Furthermore we will compare the $R^2$ value of both models, if the $R^2$ value is indeed higher we choose to use the model we selected.
 
-# Results
+# 3. Results
 
 ```{r echo=FALSE, eval=TRUE, fig.keep='none', results='hide', message=FALSE, warning=FALSE}
 #knitr::opts_chunk$set(echo = TRUE)
@@ -115,7 +115,7 @@ summary(test_set)
 
 For continuous variables, box plots are used to look at the distributions of the data and find any leverage points, where we will use Cook's distance to eliminate bad leveraging points below.
 
-```{r echo=FALSE, eval=TRUE, results=FALSE, message=FALSE, warning=FALSE,fig.width=7, fig.height=4}
+```{r echo=FALSE, eval=TRUE, results=FALSE, message=FALSE, warning=FALSE,fig.width=7, fig.height=4, fig.cap="", fig.keep="none"}
 library(ggplot2)
 library(reshape)
 train_set_plot <- data.frame(train_set$Year,train_set$Kilometers_Driven, train_set$Mileage, train_set$Engine, train_set$Power)
@@ -124,10 +124,12 @@ p <- ggplot(meltData, aes(factor(variable), value))
 p + geom_boxplot() + facet_wrap(~variable, scale="free")
 ```
 
+![box plots for continuous variables]("img/before_outliers.png"){width=50%}
 
 The following diagrams contains the box plots of each categorical variable graphed with respect to price, where we can see how the occurrence of a certain feature might affect the price.
 
-```{r echo=FALSE, eval=TRUE, results='hide', message=FALSE, warning=FALSE,fig.height=5}
+```{r echo=FALSE, eval=TRUE, results='hide', message=FALSE, warning=FALSE,fig.keep='none', fig.cap=""}
+library(dplyr)
 par(mfrow=c(2,4))
 plot(train_set$Fuel_TypePetrol, train_set$Price,
       xlab = "Fuel Type = Petrol", ylab = "Price", main = "Fuel Type vs Price")
@@ -159,9 +161,46 @@ plot(train_set$Seats7, train_set$Price,
 
 # Reset the plotting layout
 par(mfrow = c(1, 1))
+#p1 <- ggplot(train_set, aes(x = Fuel_TypePetrol, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "Petrol", y = "Price", title = "Fuel Type vs Price")
+#
+#p2 <- ggplot(train_set, aes(x = TransmissionAutomatic, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "Transmission = Automatic", y = "Price", title = "Transmission vs Price")
+#
+#p3 <- ggplot(train_set, aes(x = Owner_TypeFirst, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "First Handed", y = "Price", title = "Owner Type vs Price")
+#
+#p4 <- ggplot(train_set, aes(x = Owner_TypeSecond, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "Second Handed", y = "Price", title = "Owner Type vs Price")
+#
+#p5 <- ggplot(train_set, aes(x = Owner_TypeThird, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "Third Handed", y = "Price", title = "Owner Type vs Price")
+#
+#p6 <- ggplot(train_set, aes(x = Seats4, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "Seats = 4", y = "Price", title = "Seats vs Price")
+#
+#p7 <- ggplot(train_set, aes(x = Seats5, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "Seats = 5", y = "Price", title = "Seats vs Price")
+#
+#p8 <- ggplot(train_set, aes(x = Seats7, y = Price)) + 
+#  geom_boxplot() + 
+#  labs(x = "Seats = 7", y = "Price", title = "Seats vs Price")
+#
+## Arrange plots in a grid
+#library(gridExtra)
+#grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, ncol = 3)
 ```
 
-### Simple Linear Model
+![scatter plots of categorical variables]("img/scatter.png"){width=60%}
+
+### 3.1 Simple Linear Model
 Prior to pre-processing our data and applying various linear regression techniques, we will first generate a linear model to provide a baseline to observe any abnormality and compare the effectiveness of our methods.
 
 ```{r echo = FALSE, eval = TRUE, results="hide", fig.keep = "none", message=FALSE, warning=FALSE}
@@ -172,16 +211,18 @@ plot(simple_model)
 ```
 
 
-```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE,fig.width=6, fig.height=4}
+```{r echo=FALSE, results='hide', message=FALSE, warning=FALSE,fig.width=12, fig.height=6, fig.cap="", fig.keep='none'}
 par(mfrow=c(1,2))
 plot(simple_model, which=1, main="Residual vs Fitted")
 plot(simple_model, which=2, main="Normal QQ plot")
 par(mfrow=c(1,1))
 ```
 
+![plots for simple linear models]("img/simple_linear.png"){width=50%}
+
 From the Residual vs Fitted graph, it is immediate that there are patterns and the points are not scattered randomly this implies that there are exists non-linearity in the residuals which have to be dealed with. The spread of residuals also increases as the fitted values increase, suggesting a non-constant variance of errors, or heterosccedasity, moreover there also exists outliers with residual very far from 0. As for the QQ plot, normality of the residuals seems to be followed mostly except for the a few points.
 
-### Removing Outliers
+### 3.2 Removing Outliers
 
 We will first use cook's distance to identify and remove bad leverage points with $3/n$ as the threshold for outliers.
 
@@ -190,12 +231,16 @@ cook <- cooks.distance(simple_model)
 reduced_train_set <- train_set[cook < 3/nrow(train_set),]
 ```
 
-```{r echo=FALSE, eval=TRUE, results="hide", message=FALSE, warning=FALSE}
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.keep='none'}
 train_set_plot <- data.frame(reduced_train_set$Year, reduced_train_set$Kilometers_Driven, reduced_train_set$Mileage, reduced_train_set$Engine, reduced_train_set$Power)
 meltData <- melt(train_set_plot)
 p <- ggplot(meltData, aes(factor(variable), value)) 
 p + geom_boxplot() + facet_wrap(~variable, scale="free")
 ```
+
+![box plots of variables after removing outliers]("img/after_outliers.png"){width=40%}
+
 We can now see that some outliers does removed.
 
 
@@ -229,25 +274,18 @@ kable(vif_df, caption = "Variance Inflation Factors")
 
 Year and Kilometer have a very high VIF, similar results could be shown by inspecting the plot of these two variables, we choose to discard them. However for Power and Engine, we suspect the high VIF come from the fact that these two variables are highly correlated.
 
-<!--
-```{r echo=FALSE, results='hide'}
-par(mfrow = c(1,2))
-plot(train_set$Kilometers_Driven, train_set$Price, main="Kilometers vs Price", xlab = "Kilometers", ylab = "Price")
-plot(train_set$Year, train_set$Price, main="Year vs Price", xlab = "Year", ylab = "Price")
-par(mfrow=c(1,1))
-```
--->
 
-```{r echo=FALSE, eval=TRUE, results='hide', message=FALSE, warning=FALSE}
+```{r echo=FALSE, eval=TRUE, results='hide', message=FALSE, warning=FALSE, fig.height=5, fig.width=5, fig.keep='none', fig.cap="covariance matrix"}
 corrplot(correlations, method="circle", type="upper")
 engine_power_cov <- data.frame(correlations)$Power[5]
 engine_price_cov <- data.frame(correlations)$Price_transformed[5]
 price_power_cov <- data.frame(correlations)$Price_transformed[6]
 ```
+![covariance matrix]("img/cov_mat.png"){width=60%}
+
 Calculating the covariance, it seems that the pairs are year and mileage as well as engine and power, as they each have high covariances. For year and mileage, we decided to leave them both in as the VIF is not very high. However we chose to discard one of Engine and Power since they were very close to the threshold of five, and since Engine had a lower covariance with Price ($Cov(Engine, Price) = `r engine_price_cov`$, whereas $Cov(Power, Price) = `r price_power_cov`$ ), we decided to remove Engine and keep Power in.
 
 
-### Model of choice
 
 ```{r echo=FALSE, eval=TRUE, results='hide', fig.keep='none', message=FALSE, warning=FALSE}
 better_transformed_model <- lm(Price_transformed ~ Fuel_Type + Transmission + Owner_TypeFirst + Year + Mileage + Power, data = reduced_train_set)
@@ -259,20 +297,53 @@ rsq_good <- summary(better_transformed_model)$r.squared
 rsq_bad <- summary(simple_model)$r.squared
 ```
 
+### 3.3 Model of choice
+
 In the transformed model, we achieved a R-squared of $`r rsq_good`$, an increase of $`r rsq_good - rsq_bad`$ compared to the baseline model ($`r rsq_bad`$).
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+Results show that our treatment of  removing outliers with cook's distance, using box-cox transformation, and utilizing VIF to remove useless variables improves our model effectively. Despite the residual-fitted value plots still exhibits a slightly cubic polynomial pattern, it is now much flatter and thus random compared to the inital residual value plot of our original model.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=6, fig.cap="", fig.keep='none'}
 par(mfrow=c(1,2))
 plot(better_transformed_model, which=1, main="Residual vs Fitted")
 plot(better_transformed_model, which=2, main="Normal QQ plot")
 par(mfrow=c(1,1))
 ```
-Rresults show that our treatment of  removing outliers with cook's distance, using box-cox transformation, and utilizing VIF to remove useless variables improves our model effectively. Despite the residual-fitted value plots still exhibits a slightly cubic polynomial pattern, it is now much flatter and thus random compared to the inital residual value plot of our original model.
 
-```{r echo=FALSE, eval=TRUE, results='hide', fig.keep='none', message=FALSE, warning=FALSE}
+![plots for the final model]("img/final_model.png"){width=60%}
+
+We also provide the formula for our model:
+
+$$
+\log(Price) = -0.108346*I(Fuel\_type = Petrol) - 0.265362 * I(Transmission\_Type = Mannual) + 0.227912 * I(Owner\_Type = First) - 0.048255 * Year - 0.038586 * Mileage + 0.004413 * Power + 109.722244
+$$
+
+
+### 3.4 Testing Dataset
+
+We apply our model of choice to the testing dataset. The testing result show that aside from two outliers, out model satisfies the assumptions, so we confirm that we build a valid model. 
+
+```{r echo=FALSE, eval=TRUE, results='hide',  message=FALSE, warning=FALSE,fig.width=12, fig.height=6,  fig.cap="plots of the final model on testing set", fig.keep='none'}
+
 predictions <- predict(better_transformed_model, newdata = test_set)
+residuals <- test_set$Price_transformed - predictions
+par(mfrow = c(1, 2))
+
+plot(predictions, residuals,
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals",
+     pch = 19, )
+abline(h = 0, col = "red", lty = 2)
+
+# Create the normal Q-Q plot
+qqnorm(residuals, main = "Normal Q-Q Plot")
+qqline(residuals, col = "red")
+
+par(mfrow = c(1, 1)) # Reset the plotting area to default
 ```
 
+![plots for the final model on testing set]("img/final_model_test.png"){width=50%}
 
 ```{r echo=FALSE, eval=TRUE, results='hide', fig.keep='none', message=FALSE, warning=FALSE}
 test_model = function(model, column) {
@@ -305,3 +376,17 @@ test_model = function(model, column) {
 ```{r echo=FALSE, eval=TRUE, results='hide', fig.keep='none', message=FALSE, warning=FALSE}
 test_model(better_transformed_model, test_set$Price_transformed)
 ```
+
+# 4. Discussions
+
+According to our final model, a one-unit increase Mileage is expected to cause a 0.039586 unit decrease in the log of Price, assuming that all other variables are constant. Additionally, an increase of Poser is expected to cause a 0.0044 of increase in the log of Price when all others hold. Similarly, each unit of increase in Year is expected to cause a 0.0486 decrease in log of year. Overall, our resarch shows that there are a strong linear relation between each of our selected predictors and the response variable (log of Price), with both positive and negative correlations with the log of Price.
+
+Our model gives a credible and valuable insight into the relations between different situation of cars and their price in the second handed market. It also 
+serves as a tool to predict the expected price in the market given a new observation. Although the assumption of linearity and normality is not fully met in the testing set, out model still gives a high $R^2$ score, and successfully describes most of the observations in the dataset.
+
+However our model also have some drawbacks, the most significant one being the lack of observations in our dataset. Our entire data set contains only 100 observations, and thus might not serve as a statistically significant representative for the population. With this in mind, we might expect our model to be overfit when predicting further sets. This issue of overfit could not be resolved due to the lack of data.
+
+# Reference
+Sharma, A. D., & Sharma, V. (2020, November 11). Used car price prediction using linear regression model. https://www.irjmets.com/uploadedfiles/paper/volume2/issue_11_november_2020/4868/1628083194.pdf 
+
+Pudaruth, Sameerchand. (2014). Predicting the Price of Used Cars using Machine Learning Techniques. International Journal of Information & Computation Technology. 4. 753-764. 
